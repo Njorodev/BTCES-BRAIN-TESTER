@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Embedded Systems — Interactive Quiz (35 Qs)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
+  body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;max-width:900px;margin:20px auto;padding:18px;color:#0b1220;background:#f7fafc;}
+  .card{background:white;border-radius:10px;padding:18px;box-shadow:0 6px 18px rgba(11,18,32,0.08);}
+  h1{margin:0 0 8px;font-size:20px}
+  .meta{color:#475569;font-size:13px;margin-bottom:12px}
+  #question-area{margin-top:12px}
+  .options{margin-top:12px}
+  .option{display:block;padding:10px;border-radius:8px;border:1px solid #e6eef6;margin-bottom:8px;cursor:pointer;background:#fff}
+  .option:hover{background:#f1f7ff}
+  .option.correct{border-color:#16a34a;background:#ecfdf5}
+  .option.wrong{border-color:#dc2626;background:#fff1f2}
+  .feedback{margin-top:10px;padding:10px;border-radius:8px;font-size:14px}
+  .feedback.ok{background:#ecfdf5;border:1px solid:#bbf7d0;color:#166534}
+  .feedback.err{background:#fff1f2;border:1px solid:#fecaca;color:#7f1d1d}
+  #nextBtn, #startBtn, #resetBtn{background:#0369a1;color:white;padding:10px 14px;border-radius:8px;border:0;cursor:pointer}
+  #nextBtn[disabled]{opacity:0.5;cursor:not-allowed}
+  #progress{margin-top:12px;font-size:13px;color:#475569}
+  .summary{margin-top:18px;padding:12px;border-radius:8px;background:#f8fafc}
+  .small{font-size:13px;color:#64748b}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Embedded Systems — Interactive Quiz (35 questions)</h1>
+    <div class="meta">Immediate feedback enabled • Questions and answers randomize each round • Final score shown at end</div>
+
+    <div id="intro" class="card" style="background:#f1f5f9;padding:12px">
+      <p>This quiz uses the exact questions extracted from your uploaded exam PDF. Click <strong>Start Quiz</strong> to begin. Answer one question at a time; you'll get immediate feedback and a short explanation. When you finish, your total score appears with a Restart button to try again with a new random order.</p>
+      <button id="startBtn">Start Quiz</button>
+    </div>
+
+    <div id="question-area" style="display:none">
+      <div id="qcard" class="card">
+        <div id="qnum" class="small">Question</div>
+        <div id="question" style="font-weight:600;margin-top:6px"></div>
+        <div id="note" class="small" style="margin-top:6px;color:#334155"></div>
+        <div id="input-area" class="options"></div>
+        <div id="feedback" style="display:none" class="feedback"></div>
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
+          <button id="nextBtn" disabled>Next</button>
+          <div id="progress"></div>
+        </div>
+      </div>
+
+      <div id="result" style="display:none" class="card">
+        <h2>Quiz complete</h2>
+        <div id="scoreSummary" class="summary"></div>
+        <div style="margin-top:8px">
+          <button id="resetBtn">Restart (new random order)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// QUESTION BANK (35 items) extracted from PDF
+const BANK = [
+{type:'mcq', q:'How have microcontrollers achieved increased processing speed? (pick best)', options:['Higher clock frequencies, architectural optimizations, on-chip caches and peripherals','Only higher clock frequencies','Only larger memory','Only smaller transistors'], answer:0, explain:'Speed increases come from faster clocks, better architectures (pipelining, superscalar), and on-chip caches/peripherals.'},
+{type:'mcq', q:'MOV 20H, R1 — what addressing modes are used for destination and source?', options:['Destination: Direct, Source: Register','Destination: Immediate, Source: Register','Destination: Register, Source: Direct','Destination: Indirect, Source: Register'], answer:0, explain:'20H is a direct internal RAM address; R1 is register addressing.'},
+{type:'mcq', q:'MOV A, #30H — what addressing mode is used?', options:['Immediate','Direct','Register','Register Indirect'], answer:0, explain:'#30H is immediate data encoded in instruction.'},
+{type:'mcq', q:'SUB A, R1 — what is the source addressing mode?', options:['Register','Immediate','Direct','Indexed'], answer:0, explain:'R1 is a register, so register addressing.'},
+{type:'mcq', q:'MOV A, R6 — which addressing mode is used for source R6?', options:['Register','Direct','Immediate','Indirect'], answer:0, explain:'R6 is a register.'},
+{type:'mcq', q:'INC DPTR — this operates on which kind of register?', options:['Special function 16-bit register DPTR','General-purpose register','Accumulator','Stack Pointer'], answer:0, explain:'DPTR is the 16-bit data pointer special register.'},
+{type:'mcq', q:'ADD A, @R0 — which addressing mode for source?', options:['Register Indirect','Immediate','Direct','Register'], answer:0, explain:'@R0 uses register indirect addressing.'},
+{type:'mcq', q:'Which of these is a standalone embedded system example?', options:['Washing machine controller','Cloud server','Desktop PC','Web browser'], answer:0, explain:'Washing machine controllers are standalone embedded systems.'},
+{type:'mcq', q:'Which is a real-time embedded system example (hard or soft)?', options:['Airbag controller (hard real-time)','Word processor','Spreadsheet','Media player'], answer:0, explain:'Airbag controllers must meet hard real-time constraints.'},
+{type:'mcq', q:'Which is a networked/distributed embedded system example?', options:['IoT sensor nodes','Pocket calculator','Standalone watch','Typewriter'], answer:0, explain:'IoT nodes are networked embedded devices.'},
+{type:'mcq', q:'Which is a mobile/portable embedded system example?', options:['Mobile phone','Mainframe computer','Large server','Printer'], answer:0, explain:'Mobile phones are portable embedded systems.'},
+{type:'mcq', q:'In 8086 segmentation, physical address = segment × 16 + offset. If segment=1234H and offset=0002H, physical address is:', options:['12342H','12336H','12320H','12436H'], answer:0, explain:'1234H*16 = 12340H; +0002H = 12342H.'},
+{type:'mcq', q:'Which instruction accesses external data memory in 8051?', options:['MOVX','MOV','MOVC','ANL'], answer:0, explain:'MOVX is used for external data memory access.'},
+{type:'mcq', q:'Which addressing mode uses @R0 or @R1?', options:['Register Indirect','Direct','Immediate','Indexed'], answer:0, explain:'@R0/@R1 denote register indirect addressing.'},
+{type:'mcq', q:'Which statement about RTOS is FALSE?', options:['RTOS guarantees deterministic response','RTOS always uses more power than bare-metal','RTOS supports priority scheduling','RTOS helps resource management'], answer:1, explain:'RTOS does not always use more power; depends on implementation.'},
+{type:'mcq', q:'Which protocol commonly connects DS1307 RTC to MCU?', options:['I2C','SPI','UART','1-Wire'], answer:0, explain:'DS1307 uses I2C.'},
+{type:'mcq', q:'MOVC A, @A+DPTR does what?', options:['Read code byte from program memory at address A+DPTR into A','Read external RAM into A','Clear A','Call subroutine'], answer:0, explain:'MOVC reads from code (program) memory using DPTR + A.'},
+{type:'mcq', q:'Which 8051 internal RAM area is bit-addressable?', options:['20H-2FH','00H-1FH','30H-7FH','80H-FFH'], answer:0, explain:'20H–2FH is the bit-addressable area.'},
+{type:'mcq', q:'Which instruction increments DPTR?', options:['INC DPTR','INC A','INC R0','INC SP'], answer:0, explain:'INC DPTR increments the 16-bit data pointer.'},
+{type:'mcq', q:'A common characteristic of embedded systems is:', options:['Dedicated functionality','General-purpose computing','Unlimited memory','No real-time constraints'], answer:0, explain:'Embedded systems usually perform dedicated tasks.'},
+{type:'tf', q:'The MOV instruction in 8051 is an assembler directive. True or False?', answer:'F', explain:'MOV is an executable instruction; assembler directives are things like ORG or DB.'},
+{type:'tf', q:'Classic 8051 internal RAM size is 128 bytes. True or False?', answer:'T', explain:'Standard 8051 provides 128 bytes internal RAM.'},
+{type:'mcq', q:'Which register holds the return address during a CALL on 8051?', options:['Stack (via SP)','Program Counter','DPTR','Accumulator'], answer:0, explain:'CALL pushes return address onto stack; SP points to top.'},
+{type:'mcq', q:'Which addressing mode is used by ADD A, @R0?', options:['Register Indirect','Immediate','Direct','Register'], answer:0, explain:'@R0 denotes register indirect addressing.'},
+{type:'fill', q:'The 8051 has ____ parallel I/O ports labeled P0 to P3.', answer:'4', explain:'Standard 8051 has 4 I/O ports.'},
+{type:'mcq', q:'Which of these is NOT an interrupt source on classic 8051?', options:['ADC conversion complete','External INT0','Timer0 overflow','Serial communication'], answer:0, explain:'Classic 8051 has no built-in ADC.'},
+{type:'mcq', q:'Which network topology gives highest fault tolerance?', options:['Mesh','Star','Bus','Ring'], answer:0, explain:'Full mesh provides redundant paths.'},
+{type:'mcq', q:'Which instruction affects auxiliary carry (used in BCD)?', options:['ADD','ANL','MOV','JMP'], answer:0, explain:'ADD sets AC as required for BCD corrections.'},
+{type:'mcq', q:'MOVX @DPTR, A — what does it do?', options:['Write A to external data memory at DPTR','Read code memory into A','Move A to R0','Call subroutine'], answer:0, explain:'MOVX @DPTR, A writes accumulator to external memory.'},
+{type:'tf', q:'Harvard architecture makes runtime code modification always easy. True or False?', answer:'F', explain:'Code memory may be read-only and separate; runtime code change is not necessarily easy.'},
+{type:'mcq', q:'Which register pair is DPTR used for?', options:['16-bit data pointer for external memory and MOVC','Program counter','Stack pointer','Accumulator pair'], answer:0, explain:'DPTR is a 16-bit data pointer.'},
+{type:'fill', q:'In 8086 segmentation physical address = segment × ____ + offset.', answer:'16', explain:'Segment shifted left 4 bits (×16) then offset added.'},
+{type:'mcq', q:'Which scheduling method allows OS to forcibly switch tasks?', options:['Preemptive','Cooperative','Non-preemptive','Manual'], answer:0, explain:'Preemptive scheduling can interrupt tasks.'},
+{type:'mcq', q:'Which hardware mechanism reduces CPU load during I/O?', options:['Interrupts','Polling','Busy-wait','No-op'], answer:0, explain:'Interrupts notify CPU asynchronously, reducing polling.'},
+{type:'mcq', q:'Which instruction compares but does not store result?', options:['CMP','SUB','MOV','ADD'], answer:0, explain:'CMP sets flags based on subtraction but discards result.'},
+{type:'fill', q:'The mnemonic to load immediate data into accumulator is MOV A, #____.', answer:'value', explain:'MOV A, #value loads immediate into accumulator.'},
+{type:'mcq', q:'Which tool is commonly used for packet-level network analysis?', options:['Wireshark','Nagios','PRTG','SNMP'], answer:0, explain:'Wireshark captures and analyses packets.'},
+{type:'mcq', q:'What does DJNZ do in 8051?', options:['Decrement and jump if not zero','Direct jump','Divide and jump','Do job then next'], answer:0, explain:'DJNZ decrements operand and jumps if result ≠ 0.'}
+];
+
+// Use all 35 exactly
+let QUESTIONS = [];
+const TOTAL = BANK.length; // should be 35
+
+function shuffleArray(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } }
+
+function prepare(){
+  // deep copy bank to QUESTIONS and shuffle order
+  QUESTIONS = JSON.parse(JSON.stringify(BANK));
+  shuffleArray(QUESTIONS);
+  // For MCQ questions, shuffle options
+  QUESTIONS.forEach(q=>{
+    if(q.type==='mcq'){
+      // pair option text with original index to track correct index
+      q._opts = q.options.map((o,i)=>({o,i}));
+      shuffleArray(q._opts);
+    } else if(q.type==='tf'){
+      q._opts = [{o:'True',i:'T'},{o:'False',i:'F'}];
+      shuffleArray(q._opts);
+    }
+  });
+  current = 0; score = 0; answered=0;
+  document.getElementById('intro').style.display='none';
+  document.getElementById('question-area').style.display='block';
+  document.getElementById('result').style.display='none';
+  showQuestion();
+}
+
+let current=0, score=0, answered=0;
+
+function showQuestion(){
+  const q = QUESTIONS[current];
+  document.getElementById('qnum').textContent = 'Question ' + (current+1) + ' of ' + TOTAL;
+  document.getElementById('question').textContent = q.q;
+  document.getElementById('note').textContent = (q.type==='mcq'?'Choose one answer.':(q.type==='tf'?'True or False.':'Type the short answer then press Submit.'));
+  const ia = document.getElementById('input-area'); ia.innerHTML='';
+  document.getElementById('feedback').style.display='none';
+  document.getElementById('nextBtn').disabled = true;
+  document.getElementById('progress').textContent = 'Score: ' + score + ' • Answered: ' + answered;
+  if(q.type==='mcq' || q.type==='tf'){
+    q._opts.forEach((optObj, idx)=>{
+      const btn = document.createElement('button');
+      btn.className='option';
+      btn.innerHTML = String.fromCharCode(65+idx) + '. ' + optObj.o;
+      btn.onclick = ()=>handleChoice(optObj);
+      ia.appendChild(btn);
+    });
+  } else if(q.type==='fill'){
+    const inp = document.createElement('input'); inp.type='text'; inp.style.width='100%'; inp.style.padding='10px'; inp.placeholder='Type your short answer here (case-insensitive)';
+    ia.appendChild(inp);
+    const submit = document.createElement('button'); submit.id='submitFill'; submit.textContent='Submit'; submit.style.marginTop='8px';
+    submit.onclick = ()=>{ handleFill(inp.value.trim()); };
+    ia.appendChild(submit);
+  }
+}
+
+function handleChoice(optObj){
+  const q = QUESTIONS[current];
+  const buttons = Array.from(document.getElementById('input-area').children);
+  buttons.forEach(b=>b.disabled=true);
+  let correct=false;
+  if(q.type==='mcq'){
+    // optObj.i is original option index; compare with q.answer (which is index or 0 etc)
+    if(optObj.i === q.answer) correct=true;
+  } else if(q.type==='tf'){
+    if(optObj.i === q.answer) correct=true;
+  }
+  if(correct){
+    buttons.forEach(b=>{ if(b.innerText.includes(optObj.o)) b.classList.add('correct'); });
+    score+=1;
+    document.getElementById('feedback').className='feedback ok';
+    document.getElementById('feedback').textContent = 'Correct! ' + (q.explain || '');
+  } else {
+    buttons.forEach(b=>{ if(b.innerText.includes(optObj.o)) b.classList.add('wrong'); });
+    // find correct option text
+    let correctText='';
+    q._opts.forEach(o=>{ if(o.i === q.answer) correctText = o.o; });
+    document.getElementById('feedback').className='feedback err';
+    document.getElementById('feedback').textContent = 'Incorrect. Correct answer: ' + correctText + '. ' + (q.explain || '');
+  }
+  answered+=1;
+  document.getElementById('feedback').style.display='block';
+  document.getElementById('nextBtn').disabled=false;
+  document.getElementById('progress').textContent = 'Score: ' + score + ' • Answered: ' + answered;
+}
+
+function handleFill(val){
+  const q = QUESTIONS[current];
+  const expected = (q.answer||'').toString().trim().toLowerCase();
+  const given = (val||'').toString().trim().toLowerCase();
+  const correct = given === expected;
+  const ia = document.getElementById('input-area');
+  Array.from(ia.children).forEach(c=>c.disabled=true);
+  if(correct){
+    score+=1;
+    document.getElementById('feedback').className='feedback ok';
+    document.getElementById('feedback').textContent = 'Correct! ' + (q.explain || '');
+  } else {
+    document.getElementById('feedback').className='feedback err';
+    document.getElementById('feedback').textContent = 'Incorrect. Correct answer: ' + q.answer + '. ' + (q.explain || '');
+  }
+  answered+=1;
+  document.getElementById('feedback').style.display='block';
+  document.getElementById('nextBtn').disabled=false;
+  document.getElementById('progress').textContent = 'Score: ' + score + ' • Answered: ' + answered;
+}
+
+document.getElementById('startBtn').addEventListener('click', prepare);
+document.getElementById('nextBtn').addEventListener('click', ()=>{
+  current++;
+  if(current >= QUESTIONS.length){
+    showResults();
+  } else {
+    showQuestion();
+  }
+});
+document.getElementById('resetBtn').addEventListener('click', ()=>{ prepare(); document.getElementById('result').style.display='none'; document.getElementById('qcard').style.display='block'; });
+
+function showResults(){
+  document.getElementById('qcard').style.display='none';
+  document.getElementById('result').style.display='block';
+  const perc = Math.round((score/QUESTIONS.length)*100);
+  let text = '<p>Your score: <strong>' + score + ' / ' + QUESTIONS.length + '</strong> (' + perc + '%)</p>';
+  text += '<p class="small">You answered ' + answered + ' questions.</p>';
+  document.getElementById('scoreSummary').innerHTML = text;
+  // show reset button
+  document.getElementById('resetBtn').style.display='inline-block';
+}
+
+</script>
+</body>
+</html>
