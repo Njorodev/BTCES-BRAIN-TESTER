@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Network Security Design & Aministration  — 75 Question Quiz (Modal Results)</title>
+  <style>
+    :root{
+      --bg:#071026; --card:#0b1220; --accent:#06b6d4; --muted:#94a3b8;
+      --correct:#16a34a; --wrong:#ef4444; --glass: rgba(255,255,255,0.03);
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+    }
+    body{background:linear-gradient(180deg,#071026 0%, #071a2a 100%); color:#e6eef6; margin:0; padding:18px;}
+    .wrap{max-width:1000px;margin:0 auto;}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+    h1{font-size:20px;margin:0}
+    .controls{display:flex;gap:8px;align-items:center}
+    button{background:var(--card);border:1px solid rgba(255,255,255,0.04);color:var(--accent);padding:8px 12px;border-radius:8px;cursor:pointer}
+    button.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06); color:var(--muted)}
+    .meta{font-size:13px;color:var(--muted)}
+    main{background:var(--glass);padding:16px;border-radius:12px;box-shadow:0 6px 30px rgba(2,6,23,0.6)}
+    .question{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:14px;border-radius:10px;margin-bottom:12px;border:1px solid rgba(255,255,255,0.02)}
+    .qhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .qtext{font-weight:600}
+    .options{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+    .opt{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);cursor:pointer}
+    .opt input{margin-right:8px}
+    .feedback{margin-top:8px;font-size:13px}
+    .correct{color:var(--correct);font-weight:700}
+    .wrong{color:var(--wrong);font-weight:700}
+    .summary{margin-top:12px;background:rgba(255,255,255,0.02);padding:10px;border-radius:8px;font-size:14px;color:var(--muted)}
+    input[type="text"].fill{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit;width:100%}
+    footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+
+    /* Modal styles */
+    .modal-overlay{position:fixed;inset:0;background:rgba(2,6,23,0.7);display:none;align-items:center;justify-content:center;z-index:1000}
+    .modal{background:linear-gradient(180deg,var(--card), #07122a);padding:20px;border-radius:12px;max-width:520px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.04)}
+    .modal h2{margin:0 0 8px 0}
+    .modal .score-big{font-size:28px;font-weight:800;color:var(--accent);margin:8px 0}
+    .modal .pct{font-size:18px;color:var(--muted);margin-bottom:12px}
+    .modal .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+    .btn-primary{background:var(--accent);color:#052026;border:none;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer}
+    .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);padding:8px 12px;border-radius:8px;cursor:pointer}
+    .hidden{display:none}
+    @media(max-width:700px){body{padding:12px}.wrap{padding:0 6px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Network Security Design & Administration — 75 Question Quiz</h1>
+        <div class="meta">Undergraduate level — mixed types. Questions shuffle on reload/restart.</div>
+      </div>
+      <div class="controls">
+        <div class="meta" id="progress">Answered 0 / 75</div>
+        <button id="finishBtn" class="secondary">Finish</button>
+      </div>
+    </header>
+
+    <main id="quiz"></main>
+
+    <div class="summary" id="summaryArea" aria-live="polite"></div>
+
+    <footer>Built for study & practice. Refresh to reshuffle questions and answers.</footer>
+  </div>
+
+  <!-- Modal overlay for results -->
+  <div id="modalOverlay" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal" role="document" aria-labelledby="modalTitle">
+      <h2 id="modalTitle">Quiz Results</h2>
+      <div class="score-big" id="modalScore">0 / 75</div>
+      <div class="pct" id="modalPct">0%</div>
+      <div id="modalNote" style="color:var(--muted);font-size:13px">You've completed the quiz. You can review missed questions or restart to try again.</div>
+      <div class="modal-actions">
+        <button id="modalShowAnswers" class="btn-ghost">Show missed answers</button>
+        <button id="modalRestart" class="btn-primary">Restart Quiz</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* --------------------------
+   Utility functions
+   -------------------------- */
+function randInt(n){ return Math.floor(Math.random()*n); }
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=randInt(i+1);
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+function sanitize(s){ return String(s||'').trim(); }
+function normalizeAnswer(a){ return String(a||'').trim().toLowerCase(); }
+
+/* --------------------------
+   Questions bank (same 75 items)
+   -------------------------- */
+const QUESTIONS = [
+  {id:1, type:"mcq", question:"Which OSI layer is primarily responsible for reliable end-to-end delivery of data?", options:["Network layer","Transport layer","Session layer","Application layer"], answer:"Transport layer", explanation:"The Transport layer (e.g., TCP) provides reliable end-to-end delivery, including error recovery and flow control."},
+  {id:2, type:"tf", question:"NAT (Network Address Translation) allows multiple devices on a private network to share a single public IP address.", options:["True","False"], answer:"True", explanation:"NAT rewrites IP addresses/ports so internal hosts can communicate via one or few public addresses."},
+  {id:3, type:"fill", question:"Fill in: The protocol commonly used to securely transfer files over SSH is ______.", options:[], answer:["SFTP","sftp"], explanation:"SFTP (SSH File Transfer Protocol) runs over SSH to securely transfer files."},
+  {id:4, type:"mcq", question:"Which device primarily forwards frames at layer 2 and can also segment collision domains?", options:["Router","Switch","Hub","Firewall"], answer:"Switch", explanation:"Layer 2 switches forward frames by MAC address and separate collision domains per port."},
+  {id:5, type:"tf", question:"SSL and TLS are protocols used to encrypt web traffic.", options:["True","False"], answer:"True", explanation:"TLS (successor to SSL) encrypts web traffic (HTTPS) to protect confidentiality/integrity."},
+  {id:6, type:"fill", question:"Fill: CIDR notation for the subnet mask 255.255.255.0 is /___.", options:[], answer:["24"], explanation:"255.255.255.0 corresponds to 24 leading 1 bits: /24."},
+  {id:7, type:"mcq", question:"A DMZ in network design is used to:", options:["Isolate public-facing services from internal network","Encrypt traffic end-to-end","Replace firewalls","Provide DHCP services only"], answer:"Isolate public-facing services from internal network", explanation:"A DMZ hosts public services (web, mail) isolated from internal hosts behind firewalls."},
+  {id:8, type:"tf", question:"An IDS can actively block malicious traffic, while an IPS only detects it.", options:["True","False"], answer:"False", explanation:"An IDS is passive (detects/alerts); an IPS can take active prevention/blocking measures."},
+  {id:9, type:"fill", question:"Fill: The standard port number for HTTPS is ___.", options:[], answer:["443"], explanation:"HTTPS uses TCP port 443."},
+  {id:10, type:"mcq", question:"Which routing protocol is distance-vector based?", options:["OSPF","BGP","RIP","EIGRP"], answer:"RIP", explanation:"RIP is a classic distance-vector routing protocol using hop count as metric."},
+  {id:11, type:"tf", question:"VLANs allow logical segmentation of a single physical switch into multiple broadcast domains.", options:["True","False"], answer:"True", explanation:"VLANs partition a switch into separate broadcast domains to isolate traffic."},
+  {id:12, type:"fill", question:"Fill: Abbreviation for Public Key Infrastructure is ___.", options:[], answer:["PKI","pki"], explanation:"PKI stands for Public Key Infrastructure."},
+  {id:13, type:"mcq", question:"Which of these is a symmetric encryption algorithm?", options:["RSA","AES","DSA","ECDSA"], answer:"AES", explanation:"AES is a symmetric block cipher; RSA/DSA/ECDSA are asymmetric algorithms."},
+  {id:14, type:"tf", question:"A firewall can operate at multiple OSI layers including network and application layers.", options:["True","False"], answer:"True", explanation:"Firewalls can be packet-filtering (L3/L4) or application-aware (L7)."},
+  {id:15, type:"fill", question:"Fill: The protocol that resolves hostnames to IP addresses is ___.", options:[], answer:["DNS","dns"], explanation:"DNS maps domain names to IP addresses."},
+  {id:16, type:"mcq", question:"Which protocol provides dynamic IP addressing to hosts on a network?", options:["ARP","DNS","DHCP","ICMP"], answer:"DHCP", explanation:"DHCP automatically assigns IP addresses and configuration to hosts."},
+  {id:17, type:"tf", question:"ARP maps IP addresses to MAC addresses.", options:["True","False"], answer:"True", explanation:"ARP resolves IPv4 addresses to MAC addresses on a local LAN."},
+  {id:18, type:"fill", question:"Fill: Protocol used for secure remote shell access is ___.", options:[], answer:["SSH","ssh"], explanation:"SSH (Secure Shell) provides encrypted remote terminal access."},
+  {id:19, type:"mcq", question:"What is the main purpose of a VPN?", options:["Accelerate local network traffic","Provide encrypted remote access across untrusted networks","Translate IP addresses","Assign IP addresses"], answer:"Provide encrypted remote access across untrusted networks", explanation:"VPNs create encrypted tunnels across the internet to secure remote communications."},
+  {id:20, type:"tf", question:"BGP is used mainly between autonomous systems (ISPs) on the Internet.", options:["True","False"], answer:"True", explanation:"BGP is the inter-domain routing protocol between autonomous systems."},
+  {id:21, type:"fill", question:"Fill: The command-line tool commonly used to test connectivity by sending ICMP echo requests is ___.", options:[], answer:["ping","PING"], explanation:"ping sends ICMP echo requests to check reachability."},
+  {id:22, type:"mcq", question:"Which access control model uses roles to manage permissions efficiently?", options:["Discretionary Access Control (DAC)","Mandatory Access Control (MAC)","Role-Based Access Control (RBAC)","Attribute-Based Access Control (ABAC)"], answer:"Role-Based Access Control (RBAC)", explanation:"RBAC assigns permissions to roles, then users get roles to simplify management."},
+  {id:23, type:"tf", question:"Symmetric encryption uses a single shared key for encryption and decryption.", options:["True","False"], answer:"True", explanation:"Symmetric algorithms use the same key for both operations."},
+  {id:24, type:"fill", question:"Fill: A commonly used hashing algorithm family (not for passwords) is SHA-___.", options:[], answer:["2","256","sha2","sha-2"], explanation:"SHA-2 (e.g., SHA-256) is a widely used hash family."},
+  {id:25, type:"mcq", question:"Which of the following is strongest for verifying data integrity (without secret)?", options:["Encryption with AES","Hashing (e.g., SHA)","Base64 encoding","Compression"], answer:"Hashing (e.g., SHA)", explanation:"Hashes produce fixed digests for integrity checks; encryption does confidentiality, not just integrity."},
+  {id:26, type:"tf", question:"Port numbers below 1024 are called well-known ports.", options:["True","False"], answer:"True", explanation:"Ports 0–1023 are well-known (privileged) ports assigned to common services."},
+  {id:27, type:"fill", question:"Fill: The process of converting a domain name into its IP address is called ___ lookup.", options:[], answer:["DNS","dns"], explanation:"DNS lookup resolves domain names to IP addresses."},
+  {id:28, type:"mcq", question:"Which of these best describes 'defense in depth'?", options:["Single strong firewall protects everything","Layered multiple controls across network and hosts","Only encryption is needed","Disabling all remote access"], answer:"Layered multiple controls across network and hosts", explanation:"Defense in depth uses multiple overlapping security measures."},
+  {id:29, type:"tf", question:"TLS uses certificates from a PKI to authenticate servers.", options:["True","False"], answer:"True", explanation:"TLS relies on certificates signed by CAs to validate server identity."},
+  {id:30, type:"fill", question:"Fill: The device responsible for connecting different IP networks and performing routing is the ___.", options:[], answer:["router","Router"], explanation:"A router forwards packets between different IP networks."},
+  {id:31, type:"mcq", question:"Which attack attempts to exhaust resources by sending many requests?", options:["Man-in-the-Middle","Denial of Service (DoS)","Phishing","ARP spoofing"], answer:"Denial of Service (DoS)", explanation:"DoS floods or stresses resources to make services unavailable."},
+  {id:32, type:"tf", question:"MAC-based access control uses a user's identity to determine permissions.", options:["True","False"], answer:"False", explanation:"MAC (Mandatory Access Control) uses labels/policies, not just identity; MAC address filters use hardware addresses."},
+  {id:33, type:"fill", question:"Fill: The protocol for mapping IP addresses to MAC addresses on IPv4 networks is ___.", options:[], answer:["ARP","arp"], explanation:"ARP resolves IPv4 addresses to MAC addresses."},
+  {id:34, type:"mcq", question:"Which of these is NOT a common function of a network administrator?", options:["Configuring routers/switches","Monitoring network performance","Designing cryptographic algorithms","Managing user access"], answer:"Designing cryptographic algorithms", explanation:"Designing crypto is usually done by specialists; admins manage/configure networks."},
+  {id:35, type:"tf", question:"A switch examines IP addresses to forward traffic.", options:["True","False"], answer:"False", explanation:"A switch uses MAC addresses (layer 2); routers use IP addresses (layer 3)."},
+  {id:36, type:"fill", question:"Fill: An example of multi-factor authentication requires something you know, something you have, and something you ___.", options:[], answer:["are","are (biometric)","are/biometric"], explanation:"Multi-factor includes knowledge, possession, and inherence (biometrics)." },
+  {id:37, type:"mcq", question:"Which protocol is connectionless and does not guarantee delivery?", options:["TCP","UDP","SCTP","DCCP"], answer:"UDP", explanation:"UDP is a connectionless transport protocol without delivery guarantees."},
+  {id:38, type:"tf", question:"SSH uses asymmetric cryptography during initial key exchange.", options:["True","False"], answer:"True", explanation:"SSH uses asymmetric keys/certificates for initial authentication and key exchange."},
+  {id:39, type:"fill", question:"Fill: The commonly used tool to inspect network traffic in a GUI is ___ (e.g., Wireshark).", options:[], answer:["Wireshark","wireshark"], explanation:"Wireshark is a packet capture and analysis tool."},
+  {id:40, type:"mcq", question:"Which statement about VLAN trunking is correct?", options:["Trunk ports carry multiple VLANs","Trunks carry only one VLAN","Trunks are only for wireless traffic","Trunks replace routing"], answer:"Trunk ports carry multiple VLANs", explanation:"Trunk ports use tags (e.g., 802.1Q) to carry multiple VLANs across a link."},
+  {id:41, type:"tf", question:"SNMP can be used to monitor device health and network statistics.", options:["True","False"], answer:"True", explanation:"SNMP collects device metrics and is commonly used for monitoring."},
+  {id:42, type:"fill", question:"Fill: The abbreviation for Internet Control Message Protocol is ___.", options:[], answer:["ICMP","icmp"], explanation:"ICMP carries control messages like echo request/reply for diagnostics."},
+  {id:43, type:"mcq", question:"Which mechanism provides non-repudiation and authenticity in messages?", options:["Symmetric encryption","Digital signatures","Compression","Network Address Translation"], answer:"Digital signatures", explanation:"Digital signatures (using asymmetric cryptography) authenticate origin and provide non-repudiation."},
+  {id:44, type:"tf", question:"A subnet mask of /30 supports two usable host addresses.", options:["True","False"], answer:"True", explanation:"A /30 (255.255.255.252) yields 4 addresses: network, 2 hosts, broadcast."},
+  {id:45, type:"fill", question:"Fill: A succinct term for the process of translating a human-readable name to an IP is 'name ___'.", options:[], answer:["resolution","resolve"], explanation:"This is called name resolution (DNS does this)."},
+  {id:46, type:"mcq", question:"Which is a proactive security measure?", options:["Logging only","Regular patching and updates","Ignoring alerts","Open debug ports to the internet"], answer:"Regular patching and updates", explanation:"Patching reduces vulnerabilities proactively; logging is reactive for analysis."},
+  {id:47, type:"tf", question:"A router uses routing tables to decide the next hop for a packet.", options:["True","False"], answer:"True", explanation:"Routers consult routing tables to determine which interface/next hop to use."},
+  {id:48, type:"fill", question:"Fill: The acronym 'ACL' in networking commonly stands for ___.", options:[], answer:["Access Control List","access control list"], explanation:"ACLs define permitted/denied traffic on devices."},
+  {id:49, type:"mcq", question:"Which of the following is primarily used to detect intrusions by comparing network behaviour to known patterns?", options:["Antivirus","Signature-based IDS","NTP","HTTP proxy"], answer:"Signature-based IDS", explanation:"Signature-based IDS/IPS matches patterns (signatures) of known attacks."},
+  {id:50, type:"tf", question:"TLS certificates expire and must be renewed periodically.", options:["True","False"], answer:"True", explanation:"Certificates have validity periods and need renewal to remain trusted."},
+  {id:51, type:"fill", question:"Fill: The security model that denies everything except explicitly allowed actions is called '___ by default'.", options:[], answer:["deny","deny-all","deny by default","default deny"], explanation:"Default-deny (deny by default) blocks everything unless allowed."},
+  {id:52, type:"mcq", question:"Which is NOT an advantage of subnetting?", options:["Reduces broadcast domain size","Improves routing efficiency","Increases number of public IPs available from ISP","Improves security segmentation"], answer:"Increases number of public IPs available from ISP", explanation:"Subnetting partitions existing address space; it doesn't increase ISP-supplied public IPs."},
+  {id:53, type:"tf", question:"DHCP servers can supply DNS server addresses to clients.", options:["True","False"], answer:"True", explanation:"DHCP options can include DNS server IPs and other configuration."},
+  {id:54, type:"fill", question:"Fill: '____ as a Service' that offers scalable networking over cloud is sometimes abbreviated as 'NaaS'.", options:[], answer:["Network","network"], explanation:"NaaS = Network as a Service."},
+  {id:55, type:"mcq", question:"Which is an advantage of using asymmetric cryptography for key exchange?", options:["Smaller key sizes than symmetric","No need for secure channel for initial key distribution","Faster encryption for bulk data","Requires less CPU"], answer:"No need for secure channel for initial key distribution", explanation:"Asymmetric lets parties exchange keys/authenticate over insecure channels; symmetric is used for bulk speed."},
+  {id:56, type:"tf", question:"A broadcast address is used to send a packet to all hosts on a subnet.", options:["True","False"], answer:"True", explanation:"Broadcasts target all hosts in the local subnet (e.g., 192.168.1.255)."},
+  {id:57, type:"fill", question:"Fill: The standard email submission port (SMTP submission) is port ___.", options:[], answer:["587"], explanation:"Port 587 is commonly used for message submission with STARTTLS."},
+  {id:58, type:"mcq", question:"Which of these is a common metric used by OSPF for route selection?", options:["Hop count","Bandwidth (cost)","AS path length","Administrative distance"], answer:"Bandwidth (cost)", explanation:"OSPF uses cost (commonly inverse of bandwidth) to select routes."},
+  {id:59, type:"tf", question:"An explicit deny in an ACL always takes precedence over an allow.", options:["True","False"], answer:"True", explanation:"Most ACL implementations evaluate denies before allows or use explicit-order rules where denies can override allows."},
+  {id:60, type:"fill", question:"Fill: The protocol '___' is commonly used to synchronize clocks across networked systems.", options:[], answer:["NTP","ntp"], explanation:"NTP synchronizes system clocks across networks."},
+  {id:61, type:"mcq", question:"Which is a common method for protecting wireless networks?", options:["WEP","Open authentication","WPA2/WPA3","No SSID"], answer:"WPA2/WPA3", explanation:"WPA2 and WPA3 offer strong encryption/authentication for Wi-Fi; WEP is insecure."},
+  {id:62, type:"tf", question:"A host-based firewall runs on the endpoint and can filter traffic at the process level.", options:["True","False"], answer:"True", explanation:"Host-based firewalls can control traffic per-application/process and interface."},
+  {id:63, type:"fill", question:"Fill: In PKI, a _____ signs certificates to assert the identity of a subject.", options:[], answer:["Certificate Authority","CA","ca"], explanation:"A Certificate Authority (CA) issues and signs certificates."},
+  {id:64, type:"mcq", question:"Which technology isolates workloads by running each in its own lightweight container?", options:["Virtual Machine","Containerization (e.g., Docker)","Bare-metal server","Hub-and-spoke"], answer:"Containerization (e.g., Docker)", explanation:"Containers isolate applications with less overhead than full VMs."},
+  {id:65, type:"tf", question:"Penetration testing is the same as vulnerability scanning.", options:["True","False"], answer:"False", explanation:"Vulnerability scanning is automated discovery; penetration testing is active exploitation to validate risks."},
+  {id:66, type:"fill", question:"Fill: A common format for web API tokens is JWT, which stands for ___.", options:[], answer:["JSON Web Token","JWT"], explanation:"JWT = JSON Web Token, a compact claims format often used for auth."},
+  {id:67, type:"mcq", question:"Which of the following is an example of layered network topology?", options:["Flat network","Three-tier (core, distribution, access)","Single switch only","Fully disconnected"], answer:"Three-tier (core, distribution, access)", explanation:"Three-tier designs separate responsibilities and scale better."},
+  {id:68, type:"tf", question:"Network segmentation can reduce the blast radius of a breach.", options:["True","False"], answer:"True", explanation:"Segmentation limits lateral movement by attackers and contains impacts."},
+  {id:69, type:"fill", question:"Fill: The email authentication standard that helps prevent sender address spoofing is ___.", options:[], answer:["SPF","DKIM","both","spf/dkim"], explanation:"SPF and DKIM (and DMARC) help authenticate senders and reduce spoofing."},
+  {id:70, type:"mcq", question:"Which device is most suitable to inspect encrypted HTTPS traffic at the network edge (when configured appropriately)?", options:["Layer-2 hub","SSL/TLS-capable proxy or firewall (with certs)","Simple packet sniffer","DHCP server"], answer:"SSL/TLS-capable proxy or firewall (with certs)", explanation:"Proxies/firewalls that terminate TLS (with proper certs/trust) can inspect HTTP(S) payloads."},
+  {id:71, type:"tf", question:"A strong password policy alone is sufficient to defend against all credential theft.", options:["True","False"], answer:"False", explanation:"Strong passwords help but multi-factor auth, monitoring, and education are also required."},
+  {id:72, type:"fill", question:"Fill: The abbreviation 'IDS' stands for ___.", options:[], answer:["Intrusion Detection System","ids"], explanation:"IDS = Intrusion Detection System."},
+  {id:73, type:"mcq", question:"Which is the most appropriate place to implement ACLs to control access between departments?", options:["On the user's PC","On the departmental router or switch (edge)","Only on the internet gateway","On the printer"], answer:"On the departmental router or switch (edge)", explanation:"Placing ACLs at network edges or internal boundaries controls inter-department traffic."},
+  {id:74, type:"tf", question:"Rate limiting can help mitigate certain types of denial-of-service attacks.", options:["True","False"], answer:"True", explanation:"Rate limiting restricts traffic volume to reduce effects of flooding attacks."},
+  {id:75, type:"fill", question:"Fill: The common name for attackers who scan and test networks without permission is ____.", options:[], answer:["unauthorized","hacker","attacker","hacker (unauthorized)"], explanation:"Scanning without permission is unauthorized; terms include attacker/hacker (context matters)."}
+];
+
+/* --------------------------
+   App state
+   -------------------------- */
+let state = { questions: [], answersGiven:{}, totalAnswered:0, totalCorrect:0 };
+
+/* --------------------------
+   Render & check logic (same behavior)
+   -------------------------- */
+
+function buildQuestionElement(qObj){
+  const container = document.createElement('div');
+  container.className = 'question';
+  container.dataset.qid = qObj.id;
+
+  const header = document.createElement('div');
+  header.className = 'qhead';
+  const qnum = document.createElement('div');
+  qnum.innerHTML = `<span style="color:var(--muted);font-weight:600">Q${qObj._index}</span> <span class="qtext">${qObj.question}</span>`;
+  const qtype = document.createElement('div');
+  qtype.className = 'meta';
+  qtype.textContent = qObj.type.toUpperCase();
+  header.appendChild(qnum);
+  header.appendChild(qtype);
+  container.appendChild(header);
+
+  const opts = document.createElement('div');
+  opts.className = 'options';
+
+  if(qObj.type === 'mcq' || qObj.type === 'tf'){
+    const displayedOptions = shuffle([...qObj.options]);
+    displayedOptions.forEach((optText) => {
+      const opt = document.createElement('label');
+      opt.className = 'opt';
+      opt.tabIndex = 0;
+      const inp = document.createElement('input');
+      inp.type = 'radio';
+      inp.name = 'q_'+qObj._uid;
+      inp.value = optText;
+      const span = document.createElement('span');
+      span.textContent = optText;
+      opt.appendChild(inp);
+      opt.appendChild(span);
+      opts.appendChild(opt);
+      opt.addEventListener('click', () => {
+        if(state.answersGiven[qObj._uid]) return;
+        checkAnswer(qObj, optText, container);
+      });
+    });
+  } else if(qObj.type === 'fill'){
+    const input = document.createElement('input');
+    input.className = 'fill';
+    input.type = 'text';
+    input.placeholder = 'Type your answer and press Enter or click outside';
+    opts.appendChild(input);
+    input.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){ e.preventDefault(); if(state.answersGiven[qObj._uid]) return; checkAnswer(qObj, input.value, container); }
+    });
+    input.addEventListener('blur', () => { if(state.answersGiven[qObj._uid]) return; if(input.value.trim()!=='') checkAnswer(qObj, input.value, container); });
+  }
+
+  container.appendChild(opts);
+  const fb = document.createElement('div'); fb.className='feedback';
+  container.appendChild(fb);
+  return container;
+}
+
+function checkAnswer(qObj, userAnswerRaw, container){
+  const fb = container.querySelector('.feedback');
+  const userAnswer = sanitize(userAnswerRaw);
+  let correct = false;
+  const correctAnswer = qObj.answer;
+
+  if(qObj.type === 'mcq' || qObj.type === 'tf'){
+    correct = normalizeAnswer(userAnswer) === normalizeAnswer(correctAnswer);
+  } else if(qObj.type === 'fill'){
+    if(Array.isArray(correctAnswer)){
+      correct = correctAnswer.map(normalizeAnswer).includes(normalizeAnswer(userAnswer));
+    } else {
+      const aNorm = normalizeAnswer(correctAnswer);
+      const uNorm = normalizeAnswer(userAnswer);
+      correct = (aNorm === uNorm) || uNorm.includes(aNorm) || aNorm.includes(uNorm);
+    }
+  }
+
+  state.answersGiven[qObj._uid] = {answered:true, correct:!!correct, userAnswer:userAnswer};
+  state.totalAnswered = Object.keys(state.answersGiven).length;
+  state.totalCorrect = Object.values(state.answersGiven).filter(r => r.correct).length;
+
+  fb.innerHTML = '';
+  const resp = document.createElement('div');
+  resp.className = correct ? 'correct' : 'wrong';
+  resp.textContent = correct ? 'Correct ✔' : 'Incorrect ✖';
+  fb.appendChild(resp);
+  const explain = document.createElement('div');
+  explain.style.fontSize='13px'; explain.style.color='var(--muted)'; explain.style.marginTop='6px';
+  explain.textContent = qObj.explanation || '';
+  fb.appendChild(explain);
+
+  const inputs = container.querySelectorAll('input');
+  inputs.forEach(i => i.disabled = true);
+
+  if(qObj.type === 'mcq' || qObj.type === 'tf'){
+    const opts = container.querySelectorAll('.opt');
+    opts.forEach(o=>{
+      const val = o.querySelector('input').value;
+      if(normalizeAnswer(val) === normalizeAnswer(correctAnswer)){
+        o.style.outline = '2px solid rgba(22,163,74,0.12)';
+      }
+      if(normalizeAnswer(val) === normalizeAnswer(userAnswer) && !state.answersGiven[qObj._uid].correct){
+        o.style.outline = '2px solid rgba(239,68,68,0.12)';
+      }
+    });
+  }
+
+  document.getElementById('progress').textContent = `Answered ${state.totalAnswered} / ${state.questions.length}`;
+
+  if(state.totalAnswered === state.questions.length){
+    // show modal with results
+    showResultsModal();
+  }
+}
+
+/* --------------------------
+   Build quiz
+   -------------------------- */
+function buildQuiz(){
+  state.answersGiven = {}; state.totalAnswered = 0; state.totalCorrect = 0;
+  document.getElementById('summaryArea').textContent = '';
+  document.getElementById('progress').textContent = `Answered 0 / ${QUESTIONS.length}`;
+
+  const pool = QUESTIONS.map((q,i)=> {
+    const copy = JSON.parse(JSON.stringify(q));
+    copy._uid = 'q'+(i+1)+'_'+Math.random().toString(36).substr(2,6);
+    return copy;
+  });
+  shuffle(pool);
+  state.questions = pool.map((q, idx) => { q._index = idx+1; return q; });
+
+  const mount = document.getElementById('quiz');
+  mount.innerHTML = '';
+  state.questions.forEach(q=>{
+    const el = buildQuestionElement(q);
+    mount.appendChild(el);
+  });
+
+  // ensure modal hidden at start
+  hideModal();
+}
+
+/* --------------------------
+   Modal & final results
+   -------------------------- */
+function showResultsModal(){
+  // recompute corrects
+  state.totalCorrect = Object.values(state.answersGiven).filter(r=>r.correct).length;
+  const total = state.questions.length;
+  const correct = state.totalCorrect;
+  const pct = Math.round((correct/total)*100);
+
+  document.getElementById('modalScore').textContent = `${correct} / ${total}`;
+  document.getElementById('modalPct').textContent = `${pct}%`;
+
+  // store missed details for show-answers action
+  const missed = state.questions.filter(q => {
+    const rec = state.answersGiven[q._uid];
+    return !(rec && rec.correct);
+  }).map(m => ({id:m._index, question:m.question, correctAnswer:m.answer, explanation:m.explanation}));
+
+  document.getElementById('modalShowAnswers').dataset.missed = JSON.stringify(missed);
+
+  const overlay = document.getElementById('modalOverlay');
+  overlay.style.display = 'flex';
+  overlay.setAttribute('aria-hidden','false');
+}
+
+function hideModal(){
+  const overlay = document.getElementById('modalOverlay');
+  overlay.style.display = 'none';
+  overlay.setAttribute('aria-hidden','true');
+}
+
+/* --------------------------
+   Event handlers
+   -------------------------- */
+document.getElementById('finishBtn').addEventListener('click', ()=>{
+  const unanswered = state.questions.filter(q => !state.answersGiven[q._uid]);
+  if(unanswered.length > 0){
+    if(!confirm(`${unanswered.length} questions are still unanswered. Finish anyway?`)) return;
+    // mark unanswered as incorrect and treat as answered (user skipped)
+    unanswered.forEach(q => {
+      state.answersGiven[q._uid] = {answered:true, correct:false, userAnswer:''};
+    });
+    state.totalAnswered = Object.keys(state.answersGiven).length;
+  }
+  // show results modal even if user finished early
+  showResultsModal();
+});
+
+document.getElementById('modalRestart').addEventListener('click', ()=>{
+  hideModal();
+  buildQuiz();
+});
+
+document.getElementById('modalShowAnswers').addEventListener('click', ()=>{
+  const missed = JSON.parse(document.getElementById('modalShowAnswers').dataset.missed || '[]');
+  if(missed.length === 0){
+    alert('No missed questions — nice work!');
+    return;
+  }
+  let txt = '';
+  missed.forEach(m=>{
+    txt += `Q${m.id}: ${m.question}\nAnswer: ${Array.isArray(m.correctAnswer) ? m.correctAnswer.join(', ') : m.correctAnswer}\nNote: ${m.explanation}\n\n`;
+  });
+  const w = window.open('', '_blank', 'width=700,height=600,scrollbars=yes');
+  w.document.write('<pre style="white-space:pre-wrap;font-family:monospace;padding:12px">'+escapeHtml(txt)+'</pre>');
+});
+
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* --------------------------
+   Startup
+   -------------------------- */
+buildQuiz();
+</script>
+</body>
+</html>
